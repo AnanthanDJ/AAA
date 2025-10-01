@@ -1,0 +1,63 @@
+So, why use SQLAlchemy instead of Python's built-in `sqlite3` library to talk 
+  to the database?
+
+   1. Abstraction: You get to work with Python classes and methods (Project,
+      db.session.add, Project.query.all()) instead of writing raw SQL queries as
+      strings ("INSERT INTO project...", "SELECT * FROM project"). This makes the
+      code cleaner and more "Pythonic".
+   2. Portability: If you ever wanted to switch your database from SQLite to
+      something more powerful like PostgreSQL or MySQL, you would only need to
+      change the SQLALCHEMY_DATABASE_URI in your configuration. All your database
+      logic (Project.query.all(), etc.) would work without any changes. If you used
+      the sqlite3 library directly, you would have to rewrite all your queries.
+   3. Security: SQLAlchemy automatically helps prevent SQL injection attacks by
+      properly sanitizing your inputs when you use its methods.
+   4. Easier Migrations: As your application grows, SQLAlchemy (often with tools
+      like Alembic) makes it much easier to manage changes to your database schema
+      (like adding a new column).
+      
+
+Here's why a machine learning approach is so powerful for the
+  "Intelligent Budget Oversight" feature:
+
+  The Problem with Traditional Film Budgets
+
+  Traditionally, film budgets are created as static spreadsheets. They are based
+  on experience and best guesses, but they have some major drawbacks:
+
+   * Reactive, Not Proactive: They are great for tracking what has been spent, but
+     they can't predict future problems. You only know you're over budget after it
+     has already happened.
+   * Inflexible: When unexpected events occur (e.g., a location becomes
+     unavailable, a scene takes longer to shoot than planned), it's difficult to
+     quickly understand the financial ripple effects across the entire production.
+   * Based on Limited Data: A producer's experience is valuable, but it's
+     impossible for one person to remember and process the financial data from
+     every production they've ever worked on.
+
+  How Machine Learning Provides "Intelligent" Oversight
+
+  A machine learning model, like the one we'll build with scikit-learn, can
+  overcome these limitations by learning from data. Here's how:
+
+   1. Predictive Forecasting:
+       * Instead of just a single number, the ML model can analyze the script
+         breakdown (characters, locations, scenes) and historical budget data from
+         other films.
+       * It can then generate a much more accurate and data-driven initial budget
+         forecast, complete with confidence intervals (e.g., "We are 90% confident
+         the final budget will be between $1.4M and $1.6M").
+
+   2. Early Warning System:
+       * As you log actual expenses, the model can compare them against its
+         predictions in real-time.
+       * If it detects a pattern of overspending in a certain department (e.g.,
+         "Wardrobe is trending 15% over budget"), it can flag it as a potential
+         risk before it becomes a major problem. This allows you to take
+         corrective action early.
+
+   3. Data-Driven "What If" Scenarios:
+       * The model can help you make smarter decisions. For example, you could
+         ask: "What is the likely budget impact of adding two more shooting days
+         at this location?" The model could provide a data-backed estimate,
+         helping you make a more informed choice.

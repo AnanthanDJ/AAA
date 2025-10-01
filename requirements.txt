@@ -1,0 +1,17 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+python-dotenv
+google-generativeai
+pandas
+scikit-learn
+joblib
+Flask-Login
+Flask-Bcrypt
+Flask-WTF
+email_validator
+Flask-Mail
+langchain
+langchain-google-genai
+gunicorn
+psycopg2-binary

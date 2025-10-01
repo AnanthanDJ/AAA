@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>My Projects</h1>
+            <a href="{{ url_for('create_project') }}" class="btn btn-primary">New Project</a>
+        </div>
+        {% for project in projects %}
+            <article class="media content-section">
+                <div class="media-body">
+                    <div class="article-metadata">
+                        <a class="mr-2" href="#">{{ project.author.email }}</a>
+                        <small class="text-muted">{{ project.id }}</small>
+                    </div>
+                    <h2><a class="article-title" href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.name }}</a></h2>
+                    <p class="article-content">{{ project.script_text[:150] }}...</p>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% endblock content %}

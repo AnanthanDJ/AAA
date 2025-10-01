@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <style>
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+        .hero p {
+            font-size: 1.25rem;
+            color: #e0e0e0;
+            margin-bottom: 2rem;
+        }
+        .hero .cta-buttons a {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 0 0.5rem;
+            font-size: 1.1rem;
+            transition: background-color 0.3s;
+        }
+        .hero .cta-buttons a:hover {
+            background-color: #45a049;
+        }
+        .hero .cta-buttons a.secondary {
+            background-color: transparent;
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        .hero .cta-buttons a.secondary:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+    <div class="container">
+        <div class="hero">
+            <h1>Unlock the Future of Film Production</h1>
+            <p>CineHack.AI uses the power of artificial intelligence to streamline your entire production lifecycle, from script to screen.</p>
+            <div class="cta-buttons">
+                <a href="{{ url_for('register') }}">Get Started for Free</a>
+                <a href="{{ url_for('login') }}" class="secondary">Login</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
