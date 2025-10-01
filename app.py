@@ -54,6 +54,9 @@ login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 CORS(app)
 
+with app.app_context():
+    db.create_all()
+
 
 model = joblib.load('budget_model.joblib')
 model_columns = joblib.load('model_columns.joblib')
