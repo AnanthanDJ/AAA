@@ -16,7 +16,8 @@ from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory, ChatMessageHistory
+from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, SystemMessagePromptTemplate
 
 load_dotenv()
@@ -39,12 +40,15 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS').lower() in ['true', 'on', '1']
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+try:
+    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
+    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
+    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS').lower() in ['true', 'on', '1']
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+except (TypeError, AttributeError):
+    print("Warning: Mail server not configured. Email functionality will be disabled.")
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
