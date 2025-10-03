@@ -29,15 +29,15 @@ import joblib
 # --- App Initialization ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
-database_url = os.environ.get('DATABASE_URL')
-if database_url:
-    # On Render, the DATABASE_URL is for a PostgreSQL database.
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
-else:
-    # For local development, use a SQLite database.
-    instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
+# database_url = os.environ.get('DATABASE_URL')
+# if database_url:
+#     # On Render, the DATABASE_URL is for a PostgreSQL database.
+#     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
+# else:
+# For local development, use a SQLite database.
+instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
+os.makedirs(instance_path, exist_ok=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 try:
@@ -58,8 +58,7 @@ login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 CORS(app)
 
-with app.app_context():
-    db.create_all()
+
 
 
 model = joblib.load('budget_model.joblib')
