@@ -455,6 +455,7 @@ def generate_budget_from_script():
             }), 500
 
         full_response_text = response.candidates[0].content.parts[0].text
+        print(f"--- DEBUG: Raw Gemini API Response: {full_response_text} ---")
         # Find the start of the JSON object
         json_start_index = full_response_text.find('{')
         if json_start_index == -1:
