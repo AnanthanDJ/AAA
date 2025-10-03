@@ -30,6 +30,7 @@ import joblib
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
 database_url = os.environ.get('DATABASE_URL')
+print(f"DATABASE_URL: {database_url}")
 if database_url:
     # On Render, the DATABASE_URL is for a PostgreSQL database.
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
@@ -58,8 +59,7 @@ login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 CORS(app)
 
-with app.app_context():
-    db.create_all()
+
 
 
 model = joblib.load('budget_model.joblib')
