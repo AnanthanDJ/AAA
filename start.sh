@@ -7,4 +7,4 @@ set -e
 python create_tables.py
 
 # Start the Gunicorn server
-gunicorn --timeout 120 app:app
+gunicorn --timeout 300 app:app
