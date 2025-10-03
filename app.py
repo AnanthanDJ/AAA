@@ -30,7 +30,6 @@ import joblib
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
 database_url = os.environ.get('DATABASE_URL')
-print(f"DATABASE_URL: {database_url}")
 if database_url:
     # On Render, the DATABASE_URL is for a PostgreSQL database.
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
@@ -52,6 +51,9 @@ except (TypeError, AttributeError):
     print("Warning: Mail server not configured. Email functionality will be disabled.")
 
 db = SQLAlchemy(app)
+
+with app.app_context():
+    db.create_all()
 bcrypt = Bcrypt(app)
 mail = Mail(app)
 login_manager = LoginManager(app)
