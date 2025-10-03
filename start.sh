@@ -4,7 +4,7 @@
 set -e
 
 # Run the database initialization
-flask init-db
+python create_tables.py
 
 # Start the Gunicorn server
 gunicorn app:app

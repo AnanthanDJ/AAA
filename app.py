@@ -51,14 +51,6 @@ except (TypeError, AttributeError):
     print("Warning: Mail server not configured. Email functionality will be disabled.")
 
 db = SQLAlchemy(app)
-
-with app.app_context():
-    try:
-        print("Creating database tables...")
-        db.create_all()
-        print("Database tables created successfully.")
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
 bcrypt = Bcrypt(app)
 mail = Mail(app)
 login_manager = LoginManager(app)
