@@ -1,7 +1,8 @@
 /* General Body Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #0a0a0a; /* Even darker background */
+    background-color: #0a0a0a;
+    /* Even darker background */
     color: #e0e0e0;
     margin: 0;
     padding: 0;
@@ -16,12 +17,14 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 30px; /* Increased gap for better separation */
+    gap: 30px;
+    /* Increased gap for better separation */
 }
 
 /* Header */
 .header {
-    background-color: #1a1a1a; /* Darker header */
+    background-color: #1a1a1a;
+    /* Darker header */
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
@@ -29,19 +32,23 @@ body {
     border-bottom: 1px solid #333;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
+
 .header h1 {
     margin: 0;
     font-size: 1.8rem;
 }
+
 .header h1 a {
     color: #fff;
     text-decoration: none;
     font-weight: 600;
 }
+
 .header nav {
     flex-grow: 1;
     text-align: center;
 }
+
 .header nav a {
     color: #ccc;
     text-decoration: none;
@@ -49,31 +56,40 @@ body {
     font-size: 1rem;
     transition: color 0.3s ease;
 }
+
 .header nav a:hover {
-    color: #a0c0d0; /* Subtle accent on hover */
+    color: #a0c0d0;
+    /* Subtle accent on hover */
 }
+
 .header nav a.active {
     text-decoration: underline;
     font-weight: bold;
-    color: #a0c0d0; /* Subtle light blue for active link */
+    color: #a0c0d0;
+    /* Subtle light blue for active link */
 }
+
 .header nav a.disabled {
     color: #666;
     pointer-events: none;
 }
+
 .auth-links a {
     color: #ccc;
     text-decoration: none;
     margin-left: 15px;
     transition: color 0.3s ease;
 }
+
 .auth-links a:hover {
-    color: #a0c0d0; /* Subtle accent on hover */
+    color: #a0c0d0;
+    /* Subtle accent on hover */
 }
 
 /* Section Styles */
 .section {
-    background-color: #1a1a1a; /* Consistent with header */
+    background-color: #1a1a1a;
+    /* Consistent with header */
     border: 1px solid #333;
     border-radius: 8px;
     padding: 30px;
@@ -83,7 +99,8 @@ body {
 .section h2 {
     margin-top: 0;
     color: #e0e0e0;
-    border-bottom: 1px solid #444;
+    border: none;
+    /* Explicitly remove any borders */
     padding-bottom: 15px;
     margin-bottom: 20px;
     font-size: 2rem;
@@ -91,8 +108,12 @@ body {
 }
 
 /* Form Elements */
-textarea, input[type="text"], input[type="number"], input[type="password"] {
-    width: calc(100% - 22px); /* Adjust for padding and border */
+textarea,
+input[type="text"],
+input[type="number"],
+input[type="password"] {
+    width: calc(100% - 22px);
+    /* Adjust for padding and border */
     padding: 12px;
     background-color: #2c2c2c;
     border: 1px solid #444;
@@ -102,8 +123,10 @@ textarea, input[type="text"], input[type="number"], input[type="password"] {
     font-size: 1rem;
 }
 
-textarea:focus, input:focus {
-    border-color: #a0c0d0; /* Accent on focus */
+textarea:focus,
+input:focus {
+    border-color: #a0c0d0;
+    /* Accent on focus */
     outline: none;
     box-shadow: 0 0 5px rgba(160, 192, 208, 0.5);
 }
@@ -122,6 +145,24 @@ button {
 
 button:hover {
     background-color: #b0d0e0; /* Slightly lighter on hover */
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: #a0c0d0; /* Subtle accent */
+    color: #121212;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    text-decoration: none; /* Remove underline */
+}
+
+.btn-primary:hover {
+    background-color: #b0d0e0;
     transform: translateY(-1px);
 }
 
@@ -157,13 +198,159 @@ button:hover {
     border: 1px solid #f5c6cb;
 }
 
+/* Alerts (Flash Messages) */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Auth Pages (Login/Register) */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    /* Use 100vh for full viewport height */
+    padding: 20px;
+    box-sizing: border-box;
+    /* Include padding in element's total width and height */
+}
+
+.auth-card {
+    background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+    /* Subtle gradient */
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    max-width: 450px;
+    /* Slightly reduced max-width */
+    width: 100%;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    /* Include padding in element's total width and height */
+    overflow-y: auto;
+    /* Allow vertical scrolling if content overflows */
+    max-height: calc(100vh - 40px);
+    /* Max height to fit viewport with some margin */
+}
+
+.auth-card h2 {
+    color: #f0f0f0;
+    margin-bottom: 30px;
+    font-size: 2rem;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+}
+
+.auth-card .form-group {
+    margin-bottom: 20px;
+}
+
+.auth-card label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ccc;
+    font-size: 1.1rem;
+}
+
+.auth-card .form-input {
+    width: calc(100% - 24px); /* Adjust for padding and border */
+    padding: 12px;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 1rem;
+}
+
+.auth-card .form-input-file {
+    width: 100%;
+    padding: 12px;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 1rem;
+}
+
+.auth-card .form-input:focus {
+    border-color: #a0c0d0; /* Accent on focus */
+    outline: none;
+    box-shadow: 0 0 5px rgba(160, 192, 208, 0.5);
+}
+
+.auth-card .btn-primary {
+    background-color: #a0c0d0;
+    /* Subtle accent */
+    color: #121212;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+}
+
+.auth-card .btn-primary:hover {
+    background-color: #b0d0e0;
+    transform: translateY(-1px);
+}
+
+.auth-card .errors {
+    color: #ff6b6b;
+    /* A subtle red for errors */
+    list-style-type: none;
+    padding: 0;
+    margin-top: 5px;
+    font-size: 0.9rem;
+}
+
+.auth-card small a {
+    color: #a0c0d0;
+    /* Accent for links */
+    text-decoration: none;
+}
+
+.auth-card small a:hover {
+    text-decoration: underline;
+}
+
 /* Script Analysis Section */
 #script-analysis-results {
     background-color: #2c2c2c;
     padding: 1rem;
     border-radius: 4px;
     margin-top: 1rem;
-    white-space: pre-wrap; /* To format the JSON output */
+    white-space: pre-wrap;
+    /* To format the JSON output */
     font-family: "Courier New", Courier, monospace;
     border: 1px solid #444;
 }
@@ -192,7 +379,8 @@ button:hover {
 .budget-overview div p {
     margin: 0;
     font-size: 1.8rem;
-    color: #a0c0d0; /* Accent for key numbers */
+    color: #a0c0d0;
+    /* Accent for key numbers */
     font-weight: 700;
 }
 
@@ -221,7 +409,8 @@ button:hover {
 }
 
 #expense-list li button {
-    background-color: #888; /* Darker button for delete */
+    background-color: #888;
+    /* Darker button for delete */
     color: white;
     padding: 8px 12px;
     font-size: 0.9rem;
@@ -234,14 +423,16 @@ button:hover {
 }
 
 /* Feature and Benefit Grids */
-.feature-grid, .benefit-grid {
+.feature-grid,
+.benefit-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     margin-top: 20px;
 }
 
-.feature-item, .benefit-item {
+.feature-item,
+.benefit-item {
     background-color: #2a2a2a;
     padding: 25px;
     border-radius: 8px;
@@ -251,18 +442,23 @@ button:hover {
     border: 1px solid #333;
 }
 
-.feature-item:hover, .benefit-item:hover {
+.feature-item:hover,
+.benefit-item:hover {
     transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(160, 192, 208, 0.2); /* Subtle accent glow */
+    box-shadow: 0 5px 15px rgba(160, 192, 208, 0.2);
+    /* Subtle accent glow */
 }
 
-.feature-item h3, .benefit-item h3 {
-    color: #a0c0d0; /* Accent for headings */
+.feature-item h3,
+.benefit-item h3 {
+    color: #a0c0d0;
+    /* Accent for headings */
     font-size: 1.5rem;
     margin-bottom: 10px;
 }
 
-.feature-item p, .benefit-item p {
+.feature-item p,
+.benefit-item p {
     color: #b0b0b0;
     font-size: 0.95rem;
     line-height: 1.5;
@@ -272,7 +468,8 @@ button:hover {
 .hero.section {
     text-align: center;
     padding: 60px 30px;
-    background: linear-gradient(45deg, #1a1a1a, #2a2a2a); /* Subtle gradient */
+    background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+    /* Subtle gradient */
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     margin-bottom: 40px;
 }
@@ -295,7 +492,8 @@ button:hover {
 
 .cta-buttons a {
     display: inline-block;
-    background-color: #a0c0d0; /* Subtle accent */
+    background-color: #a0c0d0;
+    /* Subtle accent */
     color: #121212;
     padding: 15px 35px;
     text-decoration: none;
@@ -332,45 +530,298 @@ button:hover {
         flex-direction: column;
         gap: 10px;
     }
+
     .header nav {
         margin-top: 10px;
     }
+
     .header nav a {
         margin: 0 8px;
     }
+
     .auth-links {
         margin-top: 10px;
     }
+
     .container {
         padding: 10px;
     }
+
     .section {
         padding: 20px;
     }
+
     .budget-overview {
         flex-direction: column;
         gap: 15px;
     }
+
     #expense-form {
         flex-direction: column;
         align-items: stretch;
     }
-    #expense-form input, #expense-form button {
+
+    #expense-form input,
+    #expense-form button {
         width: 100%;
     }
+
     .hero h1 {
         font-size: 2.5rem;
     }
+
     .hero p {
         font-size: 1.1rem;
     }
+
     .cta-buttons a {
-        padding: 12px 25px;
+        padding: 10px 25px;
         font-size: 1rem;
         margin: 5px 0;
         display: block;
     }
-    .feature-grid, .benefit-grid {
+
+    .feature-grid,
+    .benefit-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background-color: #333;
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+    transform: translateX(0);
+    cursor: pointer;
+    min-width: 250px;
+    max-width: 350px;
+}
+
+.toast.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.toast-success {
+    background-color: #28a745;
+    /* Green for success */
+}
+
+.toast-info {
+    background-color: #17a2b8;
+    /* Blue for info */
+}
+
+.toast-warning {
+    background-color: #ffc107;
+    /* Yellow for warning */
+    color: #333;
+}
+
+.toast-danger {
+    background-color: #dc3545;
+    /* Red for danger */
+}
+
+/* Project List Page */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    /* Reduced gap */
+    border: none;
+    /* Explicitly remove any borders */
+    padding-bottom: 15px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 2.2rem;
+    color: #e0e0e0;
+}
+
+.project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.project-card {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    border-bottom: none;
+    /* Ensure no unintended bottom borders */
+}
+
+.project-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(160, 192, 208, 0.2);
+    /* Subtle accent glow */
+}
+
+.project-meta {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 15px;
+}
+
+.project-author {
+    margin-right: 10px;
+}
+
+.project-id {
+    font-weight: bold;
+}
+
+.project-card h3 {
+    font-size: 1.8rem;
+    margin: 0;
+    /* Reset margin */
+    padding: 0;
+    /* Reset padding */
+    margin-bottom: 15px;
+}
+
+.project-card .project-title {
+    color: #a0c0d0;
+    /* Accent for title */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.project-card .project-title:hover {
+    color: #b0d0e0;
+}
+
+.project-snippet {
+    font-size: 1rem;
+    color: #b0b0b0;
+    line-height: 1.5;
+    flex-grow: 1;
+    /* Allows snippet to take available space */
+    margin: 0;
+    /* Reset margin */
+    padding: 0;
+    /* Reset padding */
+    margin-bottom: 20px;
+}
+
+.project-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+    /* Pushes actions to the bottom */
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background-color: #333;
+    color: #e0e0e0;
+    padding: 8px 15px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    text-decoration: none; /* Remove underline */
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #555;
+    border-color: #a0c0d0;
+    color: #a0c0d0;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    border: 1px solid #a0c0d0; /* Subtle accent border */
+    color: #a0c0d0; /* Subtle accent text */
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.auth-links .btn-ghost:hover {
+    background-color: #a0c0d0; /* Fill with accent on hover */
+    color: black !important; /* Explicitly black text on accent background, forced */
+    border-color: #a0c0d0;
+}
+
+/* Responsive adjustments for project page */
+@media (max-width: 600px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .section-header h2 {
+        margin-bottom: 10px;
+    }
+
+    .project-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .project-actions .btn-secondary {
+        width: 100%;
+    }
+}
+
+/* Project Detail Page Charts */
+.charts-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.chart-container {
+    flex: 1 1 calc(50% - 20px); /* Two columns, with gap */
+    max-width: calc(50% - 20px);
+    min-width: 300px; /* Minimum width for charts */
+    background-color: #2a2a2a;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chart-container h3 {
+    color: #a0c0d0;
+    font-size: 1.3rem;
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        flex: 1 1 100%; /* Stack charts on small screens */
+        max-width: 100%;
     }
 }

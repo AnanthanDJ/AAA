@@ -2,16 +2,18 @@ import os
 import json
 import textwrap
 import google.generativeai as genai
-import pandas as pd
+from datetime import datetime
 from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, FileField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Email
+from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileRequired
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
@@ -20,37 +22,9 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMess
 
 load_dotenv()
 
-import joblib
-
 
 
 # --- App Initialization ---
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
-# database_url = os.environ.get('DATABASE_URL')
-# if database_url:
-#     # On Render, the DATABASE_URL is for a PostgreSQL database.
-#     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
-# else:
-# For local development, use a SQLite database.
-instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
-os.makedirs(instance_path, exist_ok=True)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-bcrypt = Bcrypt(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.login_message_category = 'info'
-CORS(app)
-
-
-
-
-model = joblib.load('budget_model.joblib')
-model_columns = joblib.load('model_columns.joblib')
 
 # Read the Gemini API key from the environment
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
@@ -59,6 +33,24 @@ if not GEMINI_API_KEY:
 else:
     genai.configure(api_key=GEMINI_API_KEY)
 
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
+instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
+os.makedirs(instance_path, exist_ok=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
+CORS(app)
 
 # --- Database Models ---
 class User(db.Model, UserMixin):
@@ -70,23 +62,21 @@ class User(db.Model, UserMixin):
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    script_text = db.Column(db.Text, nullable=False)
+    script_file_name = db.Column(db.String(200), nullable=False)
     analysis_json = db.Column(db.Text, nullable=True)
     genre = db.Column(db.String(50), nullable=True) # New column
+    logline = db.Column(db.Text, nullable=True) # New column for AI-generated logline
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    budget_items = db.relationship('Budget', backref='project', lazy=True)
 
-class Budget(db.Model):
+class Schedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(200), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-
-class Conversation(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    history = db.Column(db.Text, nullable=False, default='[]')
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False, unique=True)
-    project = db.relationship('Project', backref=db.backref('conversation', uselist=False))
+    task_description = db.Column(db.String(500), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    assigned_to = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(50), nullable=False, default='Pending')
+    project = db.relationship('Project', backref='schedules', lazy=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -120,7 +110,7 @@ class LoginForm(FlaskForm):
 
 class ProjectForm(FlaskForm):
     name = StringField('Project Name', validators=[DataRequired()])
-    script_text = TextAreaField('Script Text', validators=[DataRequired()])
+    script_file = FileField('Script File', validators=[FileRequired()])
     submit = SubmitField('Create Project')
 
 
@@ -152,15 +142,6 @@ def script_analysis():
 
 
 
-@app.route('/budget_oversight/<int:project_id>')
-@login_required
-def budget_oversight(project_id):
-    project = Project.query.get_or_404(project_id)
-    if project.author != current_user:
-        abort(403) # Forbidden
-    budget_items = Budget.query.filter_by(project_id=project.id).all()
-    return render_template('budget_oversight.html', project=project, budget_items=budget_items)
-
 @app.route("/projects", methods=['GET'])
 @login_required
 def list_projects():
@@ -172,11 +153,19 @@ def list_projects():
 def create_project():
     form = ProjectForm()
     if form.validate_on_submit():
-        project = Project(name=form.name.data, script_text=form.script_text.data, author=current_user)
-        db.session.add(project)
-        db.session.commit()
-        flash('Your project has been created!', 'success')
-        return redirect(url_for('list_projects'))
+        if form.script_file.data:
+            filename = secure_filename(form.script_file.data.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            form.script_file.data.save(filepath)
+            
+            with open(filepath, 'r') as f:
+                script_content = f.read()
+
+            project = Project(name=form.name.data, script_file_name=filename, author=current_user)
+            db.session.add(project)
+            db.session.commit()
+            flash('Your project has been created!', 'success')
+            return redirect(url_for('list_projects'))
     return render_template('create_project.html', title='New Project', form=form)
 
 @app.route("/projects/<int:project_id>")
@@ -296,309 +285,104 @@ def analyze_script():
         print(f"--- DEBUG: An unexpected error occurred: {e} ---")
         return jsonify({"error": f"An unexpected error occurred during the AI API call: {str(e)}"}), 500
 
-
-
-@app.route('/api/budget/expenses/<int:project_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/project/<int:project_id>/script_content', methods=['GET'])
 @login_required
-def handle_expenses(project_id):
-    """
-    Endpoint to manage the expense list for a specific project.
-    GET returns the list, POST adds a new expense, DELETE removes an expense.
-    """
+def get_script_content(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.author != current_user:
+        abort(403) # Forbidden
+
+    if not project.script_file_name:
+        return jsonify({"error": "No script file associated with this project."}), 404
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], project.script_file_name)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Script file not found on server."}), 404
+
+    try:
+        with open(filepath, 'r') as f:
+            script_content = f.read()
+        return jsonify({"script_content": script_content})
+    except Exception as e:
+        return jsonify({"error": f"Error reading script file: {str(e)}"}), 500
+
+
+@app.route('/schedule')
+@app.route('/schedule/<int:project_id>')
+@login_required
+def schedule_page(project_id=None):
+    if project_id is None:
+        projects = Project.query.filter_by(author=current_user).all()
+        if projects:
+            return redirect(url_for('schedule_page', project_id=projects[0].id))
+        else:
+            flash('Please create a project first to access scheduling.', 'info')
+            return redirect(url_for('create_project'))
+
+    project = Project.query.get_or_404(project_id)
+    if project.author != current_user:
+        abort(403) # Forbidden
+    schedule_items = Schedule.query.filter_by(project_id=project.id).order_by(Schedule.start_date).all()
+    return render_template('schedule.html', project=project, schedule_items=schedule_items)
+
+@app.route('/api/schedule/<int:project_id>', methods=['GET', 'POST'])
+@login_required
+def handle_schedule_items(project_id):
     project = Project.query.get_or_404(project_id)
     if project.author != current_user:
         abort(403) # Forbidden
 
     if request.method == 'POST':
         data = request.get_json()
-        new_expense = Budget(
-            description=data['description'],
-            amount=data['amount'],
-            project=project
+        new_schedule_item = Schedule(
+            project_id=project.id,
+            task_description=data['task_description'],
+            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
+            end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date(),
+            assigned_to=data.get('assigned_to'),
+            status=data.get('status', 'Pending')
         )
-        db.session.add(new_expense)
+        db.session.add(new_schedule_item)
         db.session.commit()
-        return jsonify({"id": new_expense.id, "description": new_expense.description, "amount": new_expense.amount}), 201
-    elif request.method == 'DELETE':
-        expense_id = request.get_json().get('id')
-        expense = Budget.query.get_or_404(expense_id)
-        if expense.project != project:
-            abort(403) # Forbidden
-        db.session.delete(expense)
-        db.session.commit()
-        return jsonify({"message": "Expense deleted."}), 200
+        return jsonify({
+            "id": new_schedule_item.id,
+            "task_description": new_schedule_item.task_description,
+            "start_date": new_schedule_item.start_date.isoformat(),
+            "end_date": new_schedule_item.end_date.isoformat(),
+            "assigned_to": new_schedule_item.assigned_to,
+            "status": new_schedule_item.status
+        }), 201
     else: # GET request
-        expenses_data = [{
+        schedule_items = Schedule.query.filter_by(project_id=project.id).order_by(Schedule.start_date).all()
+        return jsonify([{
             "id": item.id,
-            "description": item.description,
-            "amount": item.amount
-        } for item in project.budget_items]
-        return jsonify(expenses_data)
+            "task_description": item.task_description,
+            "start_date": item.start_date.isoformat(),
+            "end_date": item.end_date.isoformat(),
+            "assigned_to": item.assigned_to,
+            "status": item.status
+        } for item in schedule_items])
 
-@app.route('/api/budget/generate_from_script', methods=['POST'])
+@app.route('/api/schedule/item/<int:item_id>', methods=['PUT', 'DELETE'])
 @login_required
-def generate_budget_from_script():
-    """
-    Endpoint to generate a budget from a script analysis for a specific project.
-    """
-    if not GEMINI_API_KEY:
-        return jsonify({"error": "GEMINI_API_KEY not configured on the server."}), 500
-
-    project_id = request.get_json().get('project_id')
-    if not project_id:
-        return jsonify({"error": "Project ID is required for budget generation."}), 400
-
-    project = Project.query.get_or_404(project_id)
-    if project.author != current_user:
+def handle_single_schedule_item(item_id):
+    schedule_item = Schedule.query.get_or_404(item_id)
+    if schedule_item.project.author != current_user:
         abort(403) # Forbidden
 
-    if not project.analysis_json:
-        return jsonify({"error": "Script analysis not found for this project. Please analyze the script first."}), 400
-
-    script_analysis_data = json.loads(project.analysis_json)
-
-    try:
-        model = genai.GenerativeModel('gemini-2.5-pro')
-        
-        prompt = textwrap.dedent("""
-            You are a professional line producer for film. Based on the following script breakdown, 
-            generate a list of estimated expenses in JSON format. The list should be comprehensive and 
-            include common pre-production, production, and post-production costs. For each expense, 
-            provide a description and a rough estimated cost.
-            **Script Breakdown:**
-            ```json
-            {script_analysis}
-            ```
-            **Output Format:**
-            ```json
-            {{
-              "expenses": [
-                {{"description": "Location Scouting", "amount": 5000}},
-                {{"description": "Casting Director Fees", "amount": 7500}}
-              ]
-            }}
-            ```
-        """).format(script_analysis=json.dumps(script_analysis_data, indent=2))
-
-        response = model.generate_content(prompt)
-
-        if response.prompt_feedback.block_reason:
-            return jsonify({
-                "error": "The AI request was blocked by the content filter.",
-                "reason": response.prompt_feedback.block_reason.name,
-            }), 500
-
-        full_response_text = response.candidates[0].content.parts[0].text
-        print(f"--- DEBUG: Raw Gemini API Response: {full_response_text} ---")
-        # Find the start of the JSON object
-        json_start_index = full_response_text.find('{')
-        if json_start_index == -1:
-            # Handle case where no JSON object is found
-            print("--- DEBUG: No JSON object found in AI response for budget generation ---")
-            print(full_response_text)
-            print("--------------------------------------------------------------------")
-            return jsonify({
-                "error": "Failed to find a valid JSON object in the AI response.",
-                "raw_response_for_debugging": full_response_text
-            }), 500
-            
-        json_string = full_response_text[json_start_index:]
-        cleaned_response = json_string.strip().replace('```json', '').replace('```', '').strip()
-        try:
-            budget_data = json.loads(cleaned_response)
-            
-            # Clear existing budget items for the project
-            Budget.query.filter_by(project_id=project.id).delete()
-            db.session.commit()
-
-            # Add new budget items
-            for expense in budget_data.get("expenses", []):
-                amount = expense.get("amount")
-                if amount is not None and isinstance(amount, (int, float)) and "---" not in expense["description"] and amount > 0:
-                    new_expense = Budget(
-                        description=expense["description"],
-                        amount=expense["amount"],
-                        project=project
-                    )
-                    db.session.add(new_expense)
-            db.session.commit()
-
-            return jsonify({"message": "Budget generated successfully."})
-        except (json.JSONDecodeError, KeyError) as e:
-            print(f"--- DEBUG: AI response for budget generation was not valid JSON or had wrong structure: {e} ---")
-            print(cleaned_response)
-            print("------------------------------------------------------------------------------------")
-            return jsonify({
-                "error": "Failed to parse the budget from the AI response.",
-                "raw_response_for_debugging": cleaned_response
-            }), 500
-
-    except Exception as e:
-        print(f"--- DEBUG: An unexpected error occurred during budget generation: {e} ---")
-        return jsonify({"error": f"An unexpected error occurred during the AI API call: {str(e)}"}), 500
-
-
-
-
-
-@app.route('/api/budget/predict/<int:project_id>', methods=['POST'])
-@login_required
-def predict_budget(project_id):
-    """
-    Endpoint to predict a budget from script analysis data for a specific project.
-    """
-    project = Project.query.get_or_404(project_id)
-    if project.author != current_user:
-        abort(403) # Forbidden
-
-    if not project.analysis_json:
-        return jsonify({"error": "Script analysis not found for this project. Please analyze the script first."}), 400
-
-    script_analysis_data = json.loads(project.analysis_json)
-    
-    # Add the genre from the project model to the data for prediction
-    if project.genre:
-        script_analysis_data['genre'] = project.genre
-
-    try:
-        # Create a DataFrame from the input data
-        input_data = pd.DataFrame([script_analysis_data])
-        
-        # One-hot encode the 'genre' column
-        input_data_encoded = pd.get_dummies(input_data, columns=['genre'])
-        
-        # Align the columns with the model's columns
-        print(f"--- DEBUG: Model Columns: {model_columns} ---")
-        print(f"--- DEBUG: Input Columns: {input_data_encoded.columns} ---")
-        input_data_aligned = input_data_encoded.reindex(columns=model_columns, fill_value=0)
-        print(f"--- DEBUG: Aligned Input Data: {input_data_aligned.to_string()} ---")
-        
-        # Predict the budget
-        prediction = model.predict(input_data_aligned)
-        
-        return jsonify({"predicted_budget": prediction[0]})
-
-    except Exception as e:
-        print(f"--- DEBUG: An unexpected error occurred during budget prediction: {e} ---")
-        return jsonify({"error": f"An unexpected error occurred during budget prediction: {str(e)}"}), 500
-
-
-@app.route('/api/budget/copilot/history/<int:project_id>', methods=['GET'])
-@login_required
-def get_history(project_id):
-    project = Project.query.get_or_404(project_id)
-    if project.author != current_user:
-        abort(403)
-
-    if not project.conversation:
-        # Create a conversation history if it doesn't exist
-        conversation = Conversation(project=project, history='[{"role": "ai", "text": "Hello! I\'m your AI Budget Copilot. How can I help you refine your budget today?"}]')
-        db.session.add(conversation)
+    if request.method == 'PUT':
+        data = request.get_json()
+        schedule_item.task_description = data.get('task_description', schedule_item.task_description)
+        schedule_item.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else schedule_item.start_date
+        schedule_item.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else schedule_item.end_date
+        schedule_item.assigned_to = data.get('assigned_to', schedule_item.assigned_to)
+        schedule_item.status = data.get('status', schedule_item.status)
         db.session.commit()
-
-    history_json = json.loads(project.conversation.history)
-    return jsonify(history_json)
-
-
-@app.route('/api/budget/copilot/<int:project_id>', methods=['POST'])
-@login_required
-def budget_copilot(project_id):
-    """
-    Endpoint for the AI Budget Copilot, now with persistent memory.
-    """
-    project = Project.query.get_or_404(project_id)
-    if project.author != current_user:
-        abort(403)
-
-    data = request.get_json()
-    user_message = data.get('message')
-    budget_context = data.get('budget')
-
-    if not user_message or not budget_context:
-        return jsonify({"error": "Invalid request. Message and budget context are required."}), 400
-
-    # Get or create the conversation history from the database
-    if not project.conversation:
-        conversation = Conversation(project=project, history='[]')
-        db.session.add(conversation)
+        return jsonify({"message": "Schedule item updated."}), 200
+    elif request.method == 'DELETE':
+        db.session.delete(schedule_item)
         db.session.commit()
-    else:
-        conversation = project.conversation
-
-    history_json = json.loads(conversation.history)
-    
-    # Create a LangChain memory object from the stored history
-    chat_history = ChatMessageHistory()
-    for message in history_json:
-        if message['role'] == 'user':
-            chat_history.add_user_message(message['text'])
-        else:
-            chat_history.add_ai_message(message['text'])
-
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_API_KEY, convert_system_message_to_human=True)
-    memory = ConversationBufferMemory(chat_memory=chat_history, return_messages=True)
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(
-            "You are a helpful and experienced line producer acting as an AI budget copilot for a film project. "
-            "Your role is to help the user refine their budget based on their requests. "
-            "You must respond with a JSON object. The JSON object should have two keys: 'reply' and 'action'. "
-            "'reply' should be a string containing your text response to the user. "
-            "'action' should be a JSON object describing the action to be taken, or null if no action is needed. "
-            "The 'action' object can have the following 'type': 'add_item'. "
-            "For 'add_item', the 'action' object should also include an 'item' object with 'description' and 'amount'."
-        ),
-        MessagesPlaceholder(variable_name="history"),
-        HumanMessagePromptTemplate.from_template("{input}")
-    ])
-    chain = ConversationChain(memory=memory, prompt=prompt, llm=llm)
-
-    input_message = f"""
-    Here is the current state of the budget:
-    - Forecasted Budget: ${budget_context.get('forecasted', 0):,.2f}
-    - Current Expenses: {json.dumps(budget_context.get('expenses', []), indent=2)}
-
-    The user sent the following message:
-    "{user_message}"
-
-    Based on the user's message, the conversation history, and the budget context, provide a helpful reply in the specified JSON format.
-    """
-
-    try:
-        response_text = chain.predict(input=input_message)
-        
-        try:
-            cleaned_response = response_text.strip().replace('```json', '').replace('```', '').strip()
-            response_data = json.loads(cleaned_response)
-            action = response_data.get('action')
-
-            if action:
-                action_type = action.get('type')
-                if action_type == 'add_item':
-                    item_data = action.get('item')
-                    if item_data and 'description' in item_data and 'amount' in item_data:
-                        new_expense = Budget(
-                            description=item_data['description'],
-                            amount=item_data['amount'],
-                            project=project
-                        )
-                        db.session.add(new_expense)
-                        db.session.commit()
-            
-            # Save the updated history back to the database
-            history_json.append({"role": "user", "text": user_message})
-            history_json.append({"role": "ai", "text": response_data.get('reply')})
-            conversation.history = json.dumps(history_json)
-            db.session.commit()
-
-            return jsonify(response_data)
-
-        except json.JSONDecodeError:
-            print(f"--- DEBUG: AI response was not valid JSON: {response_text} ---")
-            return jsonify({"reply": response_text, "action": None})
-
-    except Exception as e:
-        print(f"--- DEBUG: An unexpected error occurred with the AI Copilot: {e} ---")
-        return jsonify({"error": f"An unexpected error occurred with the AI Copilot: {str(e)}"}), 500
+        return jsonify({"message": "Schedule item deleted."}), 200
 
 
 if __name__ == '__main__':

@@ -2,61 +2,69 @@
 
 {% block content %}
     <div class="container">
-        <header>
-            <h1>Project: {{ project.name }}</h1>
-            <p>Owner: {{ project.author.email }}</p>
-        </header>
-
-        <!-- Script Analysis Section -->
         <div class="section">
-            <h3>Script Text:</h3>
-            <textarea id="script-text" rows="10" readonly>{{ project.script_text }}</textarea>
-            <button onclick="analyzeScript({{ project.id }})">Re-Analyze Script</button>
-            <button onclick="generateBudget({{ project.id }})">Generate Budget from Analysis</button>
-            <a href="{{ url_for('budget_oversight', project_id=project.id) }}" class="btn btn-secondary">View Budget Oversight</a>
-
-            <h3>Analysis Results:</h3>
-            <div id="script-analysis-results">
-                {% if project.analysis_json %}
-                    {% set analysis_data = project.analysis_json | from_json %}
-                    <h4>Characters</h4>
-                    <ul>
-                        {% for char in analysis_data.characters %}
-                            <li><strong>{{ char.name }}</strong> ({{ char.dialogue_lines }} lines)</li>
-                        {% endfor %}
-                    </ul>
-
-                    <h4>Locations</h4>
-                    <ul>
-                        {% for loc in analysis_data.locations %}
-                            <li><strong>{{ loc.name }}</strong> ({{ loc.scenes }} scenes)</li>
-                        {% endfor %}
-                    </ul>
-
-                    <h4>Props</h4>
-                    <ul>
-                        {% for prop in analysis_data.props %}
-                            <li>{{ prop }}</li>
-                        {% endfor %}
-                    </ul>
-
-                    <h4>Estimated Scenes: {{ analysis_data.estimated_scenes }}</h4>
-                {% else %}
-                    <p>No analysis found for this script. Click "Re-Analyze Script" to generate one.</p>
-                {% endif %}
+            <div class="section-header">
+                <h2>Project: {{ project.name }}</h2>
+                <div class="project-actions">
+                    <a href="{{ url_for('schedule_page', project_id=project.id) }}" class="btn btn-primary">View Schedule</a>
+                </div>
             </div>
-        </div>
 
-        <!-- Chart Section -->
-        <div class="section" id="chart-section" style="display: {% if project.analysis_json %}block{% else %}none{% endif %};">
-            <h2>Visual Breakdown</h2>
-            <div class="chart-container">
-                <h3>Character Dialogue Distribution</h3>
-                <canvas id="character-chart"></canvas>
+            <!-- Script Content Section -->
+            <div class="section">
+                <h3>Script File: {{ project.script_file_name }}</h3>
+                <button onclick="loadAndAnalyzeScript({{ project.id }})">Analyze Script</button>
+                <div id="script-content-display" style="white-space: pre-wrap; background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-top: 15px; max-height: 400px; overflow-y: auto;"></div>
             </div>
-            <div class="chart-container">
-                <h3>Scene Location Distribution</h3>
-                <canvas id="location-chart"></canvas>
+
+            <!-- Analysis Results Section -->
+            <div class="section">
+                <h3>Analysis Results:</h3>
+                <div id="script-analysis-results">
+                    {% if project.analysis_json %}
+                        {% set analysis_data = project.analysis_json | from_json %}
+                        <h4>Genre: {{ analysis_data.genre }}</h4>
+                        <h4>Characters</h4>
+                        <ul>
+                            {% for char in analysis_data.characters %}
+                                <li><strong>{{ char.name }}</strong> ({{ char.dialogue_lines }} lines)</li>
+                            {% endfor %}
+                        </ul>
+
+                        <h4>Locations</h4>
+                        <ul>
+                            {% for loc in analysis_data.locations %}
+                                <li><strong>{{ loc.name }}</strong> ({{ loc.scenes }} scenes)</li>
+                            {% endfor %}
+                        </ul>
+
+                        <h4>Props</h4>
+                        <ul>
+                            {% for prop in analysis_data.props %}
+                                <li>{{ prop }}</li>
+                            {% endfor %}
+                        </ul>
+
+                        <h4>Estimated Scenes: {{ analysis_data.estimated_scenes }}</h4>
+                    {% else %}
+                        <p>No analysis found for this script. Click "Analyze Script" to generate one.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="section" id="chart-section" style="display: {% if project.analysis_json %}block{% else %}none{% endif %};">
+                <h2>Visual Breakdown</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Character Dialogue Distribution</h3>
+                        <canvas id="character-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Scene Location Distribution</h3>
+                        <canvas id="location-chart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -66,27 +74,67 @@
         let characterChart = null;
         let locationChart = null;
 
-        async function analyzeScript(projectId) {
-            const scriptText = document.getElementById('script-text').value;
-            const resultsContainer = document.getElementById('script-analysis-results');
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectId = {{ project.id }};
+            const scriptContentDisplay = document.getElementById('script-content-display');
+            const analysisJson = `{{ project.analysis_json | tojson }}`;
 
-            if (!scriptText.trim()) {
-                resultsContainer.innerHTML = '<p class="error">Script text cannot be empty.</p>';
-                return;
+            // Function to load script content
+            async function loadScriptContent() {
+                try {
+                    const response = await fetch(`/api/project/${projectId}/script_content`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        scriptContentDisplay.textContent = data.script_content;
+                    } else {
+                        scriptContentDisplay.textContent = 'Error loading script content.';
+                    }
+                } catch (error) {
+                    console.error('Error loading script content:', error);
+                    scriptContentDisplay.textContent = 'Error loading script content.';
+                }
             }
 
-            resultsContainer.innerHTML = '<p>Analyzing, please wait...</p>';
+            // Load script content on page load
+            loadScriptContent();
+
+            // Initial chart rendering if analysis_json exists
+            if (analysisJson && analysisJson !== 'null') {
+                const analysisData = JSON.parse(analysisJson);
+                document.getElementById('chart-section').style.display = 'block';
+                createCharacterChart(analysisData.characters);
+                createLocationChart(analysisData.locations);
+            }
+        });
+
+        async function loadAndAnalyzeScript(projectId) {
+            const resultsContainer = document.getElementById('script-analysis-results');
+            resultsContainer.innerHTML = '<p>Loading script and analyzing, please wait...</p>';
 
             try {
-                const response = await fetch('/api/script/analyze', {
+                // First, load the script content from the server
+                const scriptContentResponse = await fetch(`/api/project/${projectId}/script_content`);
+                if (!scriptContentResponse.ok) {
+                    throw new Error('Failed to load script content.');
+                }
+                const scriptContentData = await scriptContentResponse.json();
+                const scriptText = scriptContentData.script_content;
+
+                if (!scriptText.trim()) {
+                    resultsContainer.innerHTML = '<p class="error">Script text cannot be empty.</p>';
+                    return;
+                }
+
+                // Then, send the script content for analysis
+                const analyzeResponse = await fetch('/api/script/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({project_id: projectId, script: scriptText})
                 });
-                const data = await response.json();
+                const data = await analyzeResponse.json();
                 displayAnalysisResults(data, projectId);
             } catch (error) {
-                resultsContainer.innerHTML = '<p class="error">Failed to reach API.</p>';
+                resultsContainer.innerHTML = `<p class="error">Failed to analyze script: ${error.message}</p>`;
                 console.error("Error analyzing script:", error);
             }
         }
@@ -105,7 +153,8 @@
                 return;
             }
 
-            let html = '<h4>Characters</h4><ul>';
+            let html = `<h4>Genre: ${data.genre}</h4>`;
+            html += '<h4>Characters</h4><ul>';
             data.characters.forEach(char => {
                 html += `<li><strong>${char.name}</strong> (${char.dialogue_lines} lines)</li>`;
             });
@@ -144,15 +193,26 @@
                     datasets: [{
                         label: '# of Dialogue Lines',
                         data: characters.map(c => c.dialogue_lines),
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(160, 192, 208, 0.5)', // Subtle accent
+                        borderColor: 'rgba(160, 192, 208, 1)', // Subtle accent
                         borderWidth: 1
                     }]
                 },
                 options: {
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: { color: '#444' }, // Darker grid lines
+                            ticks: { color: '#e0e0e0' } // Light text
+                        },
+                        x: {
+                            grid: { color: '#444' },
+                            ticks: { color: '#e0e0e0' } // Light text
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0' } // Light text for legend
                         }
                     }
                 }
@@ -172,73 +232,32 @@
                         label: '# of Scenes',
                         data: locations.map(l => l.scenes),
                         backgroundColor: [
-                            'rgba(255, 99, 132, 0.2)',
-                            'rgba(54, 162, 235, 0.2)',
-                            'rgba(255, 206, 86, 0.2)',
-                            'rgba(75, 192, 192, 0.2)',
-                            'rgba(153, 102, 255, 0.2)',
-                            'rgba(255, 159, 64, 0.2)'
+                            'rgba(160, 192, 208, 0.5)', // Subtle accent
+                            'rgba(120, 150, 160, 0.5)', // Darker subtle accent
+                            'rgba(200, 220, 230, 0.5)', // Lighter subtle accent
+                            'rgba(90, 110, 120, 0.5)',
+                            'rgba(180, 200, 210, 0.5)',
+                            'rgba(70, 90, 100, 0.5)'
                         ],
                         borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
+                            'rgba(160, 192, 208, 1)',
+                            'rgba(120, 150, 160, 1)',
+                            'rgba(200, 220, 230, 1)',
+                            'rgba(90, 110, 120, 1)',
+                            'rgba(180, 200, 210, 1)',
+                            'rgba(70, 90, 100, 1)'
                         ],
                         borderWidth: 1
                     }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0' } // Light text for legend
+                        }
+                    }
                 }
             });
         }
-
-        async function generateBudget(projectId) {
-            if (!projectId) {
-                alert("Project ID is required to generate budget.");
-                return;
-            }
-
-            const generateButton = document.querySelector('button[onclick="generateBudget(' + projectId + ')"]');
-            generateButton.textContent = 'Generating...';
-            generateButton.disabled = true;
-
-            try {
-                const response = await fetch('/api/budget/generate_from_script', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ project_id: projectId })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Failed to generate budget.");
-                }
-
-                // Save the project ID to localStorage for the budget oversight page
-                localStorage.setItem('currentProjectId', projectId);
-
-                // Redirect to the budget page
-                window.location.href = `/budget_oversight/${projectId}`;
-
-            } catch (error) {
-                alert(`Error generating budget: ${error.message}`);
-                console.error("Error generating budget:", error);
-                generateButton.textContent = 'Generate Budget from Analysis';
-                generateButton.disabled = false;
-            }
-        }
-
-        // Initial chart rendering if analysis_json exists
-        window.onload = function() {
-            const analysisJson = `{{ project.analysis_json | tojson }}`;
-            if (analysisJson && analysisJson !== 'null') {
-                const analysisData = JSON.parse(analysisJson);
-                document.getElementById('chart-section').style.display = 'block';
-                createCharacterChart(analysisData.characters);
-                createLocationChart(analysisData.locations);
-            }
-        };
-
     </script>
 {% endblock %}
