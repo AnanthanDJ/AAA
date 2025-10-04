@@ -12,8 +12,6 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, curren
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Email
 from flask_wtf import FlaskForm
-from flask_mail import Mail, Message
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
@@ -40,19 +38,9 @@ os.makedirs(instance_path, exist_ok=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'database.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-try:
-    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
-    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
-    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS').lower() in ['true', 'on', '1']
-    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
-except (TypeError, AttributeError):
-    print("Warning: Mail server not configured. Email functionality will be disabled.")
-
 db = SQLAlchemy(app)
+
 bcrypt = Bcrypt(app)
-mail = Mail(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
@@ -77,7 +65,6 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
-    confirmed = db.Column(db.Boolean, nullable=False, default=False)
     projects = db.relationship('Project', backref='author', lazy=True)
 
 class Project(db.Model):
@@ -106,32 +93,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # --- Token Generation and Email Sending ---
-def generate_confirmation_token(email):
-    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-    return serializer.dumps(email, salt='email-confirmation-salt')
-
-def confirm_token(token, expiration=3600):
-    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-    try:
-        email = serializer.loads(
-            token,
-            salt='email-confirmation-salt',
-            max_age=expiration
-        )
-    except SignatureExpired:
-        return None
-    return email
-
-def send_email(to, subject, template):
-    msg = Message(
-        subject,
-        recipients=[to],
-        html=template,
-        sender=app.config['MAIL_DEFAULT_SENDER']
-    )
-    mail.send(msg)
-
-# Custom Jinja2 filter to parse JSON
+@app.template_filter('from_json')
 @app.template_filter('from_json')
 def from_json_filter(value):
     if value is None:
@@ -141,7 +103,7 @@ def from_json_filter(value):
 
 # --- Forms ---
 class RegistrationForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    email = StringField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Sign Up')
@@ -233,37 +195,13 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        user = User(email=form.email.data, password=hashed_password, confirmed=False)
+        user = User(email=form.email.data, password=hashed_password)
         db.session.add(user)
         db.session.commit()
 
-        token = generate_confirmation_token(user.email)
-        confirm_url = url_for('confirm_email', token=token, _external=True)
-        html = render_template('email/activate.html', confirm_url=confirm_url)
-        subject = "Please confirm your email"
-        send_email(user.email, subject, html)
-
-        flash('A confirmation email has been sent via email.', 'success')
+        flash('Your account has been created! You can now log in.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
-
-
-@app.route('/confirm/<token>')
-def confirm_email(token):
-    try:
-        email = confirm_token(token)
-    except:
-        flash('The confirmation link is invalid or has expired.', 'danger')
-        return redirect(url_for('login'))
-    user = User.query.filter_by(email=email).first_or_404()
-    if user.confirmed:
-        flash('Account already confirmed. Please login.', 'success')
-    else:
-        user.confirmed = True
-        db.session.add(user)
-        db.session.commit()
-        flash('You have confirmed your account. Thanks!', 'success')
-    return redirect(url_for('index'))
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -274,13 +212,9 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user and bcrypt.check_password_hash(user.password, form.password.data):
-            if user.confirmed:
-                login_user(user, remember=True)
-                next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('index'))
-            else:
-                flash('Please confirm your account first.', 'warning')
-                return redirect(url_for('login'))
+            login_user(user, remember=True)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
     return render_template('login.html', title='Login', form=form)
