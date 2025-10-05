@@ -63,6 +63,9 @@
                     <option value="On Hold">On Hold</option>
                 </select>
 
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location">
+
                 <button type="submit" class="btn-primary">Save Task</button>
                 <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
             </form>
@@ -77,22 +80,29 @@
                         <th>End Date</th>
                         <th>Assigned To</th>
                         <th>Status</th>
+                        <th>Location</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in schedule_items %}
-                    <tr data-id="{{ item.id }}">
-                        <td>{{ item.task_description }}</td>
-                        <td>{{ item.start_date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ item.end_date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ item.assigned_to if item.assigned_to else 'N/A' }}</td>
-                        <td>{{ item.status }}</td>
-                        <td>
-                            <button class="edit-schedule-btn btn-secondary" data-id="{{ item.id }}">Edit</button>
-                            <button class="delete-schedule-btn btn-danger" data-id="{{ item.id }}">Delete</button>
-                        </td>
-                    </tr>
+                    {% for location, items in schedule_by_location.items() %}
+                        <tr class="location-header">
+                            <td colspan="7"><strong>{{ location }}</strong></td>
+                        </tr>
+                        {% for item in items %}
+                            <tr data-id="{{ item.id }}">
+                                <td>{{ item.task_description }}</td>
+                                <td>{{ item.start_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ item.end_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ item.assigned_to if item.assigned_to else 'N/A' }}</td>
+                                <td>{{ item.status }}</td>
+                                <td>{{ item.location if item.location else 'N/A' }}</td>
+                                <td>
+                                    <button class="edit-schedule-btn btn-secondary" data-id="{{ item.id }}">Edit</button>
+                                    <button class="delete-schedule-btn btn-danger" data-id="{{ item.id }}">Delete</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -133,13 +143,15 @@
             const end_date = document.getElementById('end_date').value;
             const assigned_to = document.getElementById('assigned_to').value;
             const status = document.getElementById('status').value;
+            const location = document.getElementById('location').value;
 
             const data = {
                 task_description,
                 start_date,
                 end_date,
                 assigned_to,
-                status
+                status,
+                location
             };
 
             let url = `/api/schedule/${projectId}`;
@@ -178,6 +190,7 @@
                 document.getElementById('end_date').value = row.children[2].textContent;
                 document.getElementById('assigned_to').value = row.children[3].textContent === 'N/A' ? '' : row.children[3].textContent;
                 document.getElementById('status').value = row.children[4].textContent;
+                document.getElementById('location').value = row.children[5].textContent === 'N/A' ? '' : row.children[5].textContent;
 
                 scheduleFormContainer.style.display = 'block';
                 addScheduleBtn.style.display = 'none';

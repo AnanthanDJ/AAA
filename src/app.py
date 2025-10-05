@@ -86,6 +86,7 @@ class Schedule(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     assigned_to = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(50), nullable=False, default='Pending')
+    location = db.Column(db.String(100), nullable=True)
     project = db.relationship('Project', backref='schedules', lazy=True)
 
 @login_manager.user_loader
@@ -343,10 +344,16 @@ def schedule(project_id):
     characters = script_analysis_results.get('characters', [])
     locations = script_analysis_results.get('locations', [])
     props = script_analysis_results.get('props', [])
+    schedule_items = Schedule.query.filter_by(project_id=project.id).all()
 
-    schedule_items = Schedule.query.filter_by(project_id=project.id).order_by(Schedule.start_date).all()
+    schedule_by_location = {}
+    for item in schedule_items:
+        location = item.location if item.location else "No Location"
+        if location not in schedule_by_location:
+            schedule_by_location[location] = []
+        schedule_by_location[location].append(item)
 
-    return render_template('schedule.html', project=project, schedule_items=schedule_items, characters=characters, locations=locations, props=props)
+    return render_template('schedule.html', project=project, schedule_by_location=schedule_by_location, characters=characters, locations=locations, props=props)
 
 @app.route('/api/schedule/<int:project_id>', methods=['GET', 'POST'])
 @login_required
@@ -363,7 +370,8 @@ def handle_schedule_items(project_id):
             start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
             end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date(),
             assigned_to=data.get('assigned_to'),
-            status=data.get('status', 'Pending')
+            status=data.get('status', 'Pending'),
+            location=data.get('location')
         )
         db.session.add(new_schedule_item)
         db.session.commit()
@@ -373,7 +381,8 @@ def handle_schedule_items(project_id):
             "start_date": new_schedule_item.start_date.isoformat(),
             "end_date": new_schedule_item.end_date.isoformat(),
             "assigned_to": new_schedule_item.assigned_to,
-            "status": new_schedule_item.status
+            "status": new_schedule_item.status,
+            "location": new_schedule_item.location
         }), 201
     else: # GET request
         schedule_items = Schedule.query.filter_by(project_id=project.id).order_by(Schedule.start_date).all()
@@ -383,7 +392,8 @@ def handle_schedule_items(project_id):
             "start_date": item.start_date.isoformat(),
             "end_date": item.end_date.isoformat(),
             "assigned_to": item.assigned_to,
-            "status": item.status
+            "status": item.status,
+            "location": item.location
         } for item in schedule_items])
 
 @app.route('/api/schedule/item/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -400,6 +410,7 @@ def handle_single_schedule_item(item_id):
         schedule_item.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else schedule_item.end_date
         schedule_item.assigned_to = data.get('assigned_to', schedule_item.assigned_to)
         schedule_item.status = data.get('status', schedule_item.status)
+        schedule_item.location = data.get('location', schedule_item.location)
         db.session.commit()
         return jsonify({"message": "Schedule item updated."}), 200
     elif request.method == 'DELETE':
@@ -444,7 +455,8 @@ def generate_tasks_from_script(project_id):
             start_date=today,
             end_date=today, # Can be adjusted later
             assigned_to='Location Manager',
-            status='Pending'
+            status='Pending',
+            location=loc['name']
         )
         db.session.add(new_task)
         generated_tasks.append(new_task)
