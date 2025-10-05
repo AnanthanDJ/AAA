@@ -50,7 +50,15 @@ pytest tests/
 MIT
 
 ## Attributions
-*   [List any third-party libraries, assets, or code used here]
+*   **Google Gemini Pro API:** For AI Script Analysis and the AI Copilot features.
+*   **Flask:** Python web framework used for the backend API.
+*   **scikit-learn:** Machine learning library for the predictive analytics engine.
+*   **Numpy:** Numerical computing library, often used in conjunction with scikit-learn.
+*   **LangChain:** Framework for integrating Large Language Models.
+*   **Rich:** Python library for rich text and beautiful formatting in the terminal (if used in the application itself).
+*   **SQLite:** Serverless, file-based database.
+*   **Dark-themed HTML/CSS Template:** (If applicable, specify source if known, e.g., "Template adapted from [Source Name/URL]").
+*   **GitHub Copilot Pro:** (Optional, if you want to acknowledge its assistance in code generation).
 
 ## Consent for Local Network Access
 By submitting this project, we consent to event organizers and judges accessing the listed local endpoints while connected to the event Wi‑Fi for evaluation purposes. We understand that organizers will not access private customer data and will only use provided credentials.
