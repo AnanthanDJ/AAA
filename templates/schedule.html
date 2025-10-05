@@ -5,6 +5,36 @@
     <div class="section">
         <h2>Schedule for {{ project.name }}</h2>
 
+        <div class="script-analysis-suggestions">
+            <h3>Script Analysis Suggestions</h3>
+            {% if characters %}
+            <h4>Characters:</h4>
+            <ul>
+                {% for character in characters %}
+                <li>{{ character.name }} ({{ character.dialogue_lines }} dialogue lines)</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if locations %}
+            <h4>Locations:</h4>
+            <ul>
+                {% for location in locations %}
+                <li>{{ location.name }} ({{ location.scenes }} scenes)</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if props %}
+            <h4>Props:</h4>
+            <ul>
+                {% for prop in props %}
+                <li>{{ prop }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
         <div class="schedule-controls">
             <button id="add-schedule-btn">Add New Task</button>
         </div>

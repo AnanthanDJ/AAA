@@ -6,7 +6,17 @@
             <div class="section-header">
                 <h2>Project: {{ project.name }}</h2>
                 <div class="project-actions">
-                    <a href="{{ url_for('schedule_page', project_id=project.id) }}" class="btn btn-primary">View Schedule</a>
+                    <a href="{{ url_for('schedule', project_id=project.id) }}" class="btn btn-primary">View Schedule</a>
+                </div>
+            </div>
+
+            <!-- Budget Oversight Section -->
+            <div class="section">
+                <h3>Budget Oversight</h3>
+                <div class="budget-controls">
+                    <label for="forecasted_budget">Forecasted Budget:</label>
+                    <input type="number" id="forecasted_budget" value="{{ project.forecasted_budget | default(0.0) }}" step="0.01">
+                    <button id="save-budget-btn" class="btn btn-secondary">Save Budget</button>
                 </div>
             </div>
 
@@ -256,6 +266,40 @@
                             labels: { color: '#e0e0e0' } // Light text for legend
                         }
                     }
+                }
+            });
+        }
+
+        // Budget Save Logic
+        const saveBudgetBtn = document.getElementById('save-budget-btn');
+        if (saveBudgetBtn) {
+            saveBudgetBtn.addEventListener('click', async function() {
+                const forecastedBudgetInput = document.getElementById('forecasted_budget');
+                const newBudget = parseFloat(forecastedBudgetInput.value);
+
+                if (isNaN(newBudget) || newBudget < 0) {
+                    alert('Please enter a valid positive number for the budget.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/project/${projectId}/update_budget`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ forecasted_budget: newBudget })
+                    });
+
+                    if (response.ok) {
+                        alert('Budget updated successfully!');
+                    } else {
+                        const errorData = await response.json();
+                        alert('Error updating budget: ' + errorData.error);
+                    }
+                } catch (error) {
+                    console.error('Error saving budget:', error);
+                    alert('An error occurred while saving the budget.');
                 }
             });
         }

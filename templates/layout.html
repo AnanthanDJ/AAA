@@ -15,7 +15,7 @@
             <a href="{{ url_for('script_analysis') }}" class="{{ 'active' if request.endpoint == 'script_analysis' else '' }}">AI Script Analysis</a>
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('list_projects') }}" class="{{ 'active' if request.endpoint == 'list_projects' else '' }}">My Projects</a>
-                <a href="{{ url_for('schedule_page') }}" class="{{ 'active' if request.endpoint == 'schedule_page' else '' }}">Scheduling</a>
+                <a href="{{ url_for('list_projects') }}" class="{{ 'active' if request.endpoint == 'list_projects' else '' }}">Projects</a>
             {% endif %}
         </nav>
         <div class="auth-links">

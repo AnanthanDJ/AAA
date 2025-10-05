@@ -3,7 +3,7 @@ import json
 import textwrap
 import google.generativeai as genai
 from datetime import datetime
-from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, abort
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, abort, session
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
@@ -66,6 +66,7 @@ class Project(db.Model):
     analysis_json = db.Column(db.Text, nullable=True)
     genre = db.Column(db.String(50), nullable=True) # New column
     logline = db.Column(db.Text, nullable=True) # New column for AI-generated logline
+    forecasted_budget = db.Column(db.Float, nullable=True, default=0.0) # New column for forecasted budget
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class Schedule(db.Model):
@@ -307,23 +308,21 @@ def get_script_content(project_id):
         return jsonify({"error": f"Error reading script file: {str(e)}"}), 500
 
 
-@app.route('/schedule')
 @app.route('/schedule/<int:project_id>')
 @login_required
-def schedule_page(project_id=None):
-    if project_id is None:
-        projects = Project.query.filter_by(author=current_user).all()
-        if projects:
-            return redirect(url_for('schedule_page', project_id=projects[0].id))
-        else:
-            flash('Please create a project first to access scheduling.', 'info')
-            return redirect(url_for('create_project'))
-
+def schedule(project_id):
     project = Project.query.get_or_404(project_id)
     if project.author != current_user:
         abort(403) # Forbidden
+
+    script_analysis_results = session.get('script_analysis_results', {})
+    characters = script_analysis_results.get('characters', [])
+    locations = script_analysis_results.get('locations', [])
+    props = script_analysis_results.get('props', [])
+
     schedule_items = Schedule.query.filter_by(project_id=project.id).order_by(Schedule.start_date).all()
-    return render_template('schedule.html', project=project, schedule_items=schedule_items)
+
+    return render_template('schedule.html', project=project, schedule_items=schedule_items, characters=characters, locations=locations, props=props)
 
 @app.route('/api/schedule/<int:project_id>', methods=['GET', 'POST'])
 @login_required
@@ -383,6 +382,23 @@ def handle_single_schedule_item(item_id):
         db.session.delete(schedule_item)
         db.session.commit()
         return jsonify({"message": "Schedule item deleted."}), 200
+
+@app.route('/api/project/<int:project_id>/update_budget', methods=['POST'])
+@login_required
+def update_project_budget(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.author != current_user:
+        abort(403) # Forbidden
+
+    data = request.get_json()
+    new_budget = data.get('forecasted_budget')
+
+    if new_budget is None or not isinstance(new_budget, (int, float)) or new_budget < 0:
+        return jsonify({"error": "Invalid budget value provided."}), 400
+
+    project.forecasted_budget = new_budget
+    db.session.commit()
+    return jsonify({"message": "Project budget updated successfully."}), 200
 
 
 if __name__ == '__main__':
