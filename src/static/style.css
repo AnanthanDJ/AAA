@@ -966,3 +966,21 @@ button:hover {
 #schedule-form button {
     margin-right: 10px;
 }
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #444;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 20px;
+    background-color: #a0c0d0;
+    border-radius: 5px;
+    text-align: center;
+    line-height: 20px;
+    color: #121212;
+    font-weight: bold;
+}

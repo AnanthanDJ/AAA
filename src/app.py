@@ -78,6 +78,22 @@ class Expense(db.Model):
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     category = db.Column(db.String(100), nullable=True)
 
+class Asset(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(50), nullable=False)
+    cost = db.Column(db.Float, nullable=False)
+    project = db.relationship('Project', backref='assets', lazy=True)
+
+class Scene(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    scene_number = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), nullable=False, default='To Do')
+    project = db.relationship('Project', backref='scenes', lazy=True)
+
 class Schedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
@@ -202,6 +218,67 @@ def expenses_page(project_id):
         abort(403) # Forbidden
     return render_template('expenses.html', project=project)
 
+@app.route("/projects/<int:project_id>/assets", methods=['GET', 'POST'])
+@login_required
+def asset_tracking(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.author != current_user:
+        abort(403)
+    if request.method == 'POST':
+        data = request.get_json()
+        new_asset = Asset(
+            project_id=project.id,
+            name=data['name'],
+            status=data['status'],
+            cost=data['cost']
+        )
+        db.session.add(new_asset)
+        db.session.commit()
+        return jsonify({"message": "Asset added successfully."}), 201
+    else:
+        assets = Asset.query.filter_by(project_id=project.id).all()
+        return render_template('asset.html', project=project, assets=assets)
+
+@app.route("/api/asset/<int:asset_id>", methods=['DELETE'])
+@login_required
+def delete_asset(asset_id):
+    asset = Asset.query.get_or_404(asset_id)
+    if asset.project.author != current_user:
+        abort(403)
+    db.session.delete(asset)
+    db.session.commit()
+    return jsonify({"message": "Asset deleted successfully."}), 200
+
+@app.route("/projects/<int:project_id>/post_production", methods=['GET'])
+@login_required
+def post_production_tracking(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.author != current_user:
+        abort(403)
+    scenes = Scene.query.filter_by(project_id=project.id).order_by(Scene.scene_number).all()
+    
+    total_scenes = len(scenes)
+    done_scenes = len([s for s in scenes if s.status == 'Done'])
+    progress = (done_scenes / total_scenes) * 100 if total_scenes > 0 else 0
+
+    return render_template('post_production.html', project=project, scenes=scenes, progress=progress)
+
+@app.route("/api/scene/<int:scene_id>", methods=['PUT', 'DELETE'])
+@login_required
+def handle_scene(scene_id):
+    scene = Scene.query.get_or_404(scene_id)
+    if scene.project.author != current_user:
+        abort(403)
+    if request.method == 'PUT':
+        data = request.get_json()
+        scene.status = data.get('status', scene.status)
+        db.session.commit()
+        return jsonify({"message": "Scene updated successfully."}), 200
+    elif request.method == 'DELETE':
+        db.session.delete(scene)
+        db.session.commit()
+        return jsonify({"message": "Scene deleted successfully."}), 200
+
 # --- Authentication Routes ---
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -275,6 +352,7 @@ def analyze_script():
             "characters": [{{"name": "CHARACTER_NAME", "dialogue_lines": COUNT}}],
             "locations": [{{"name": "LOCATION_NAME", "scenes": COUNT}}],
             "props": ["PROP_NAME_1", "PROP_NAME_2"],
+            "scenes": [{{"scene_number": SCENE_NUMBER, "description": "SCENE_DESCRIPTION"}}],
             "estimated_scenes": TOTAL_SCENE_COUNT}}
             The "genre" should be one of the following: "Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Thriller", "Romance", "Adventure", "Musical", "Indie".
             Only return the raw JSON object, with no surrounding text, comments, or markdown.
@@ -297,6 +375,17 @@ def analyze_script():
             analysis_result = json.loads(cleaned_response)
             project.analysis_json = json.dumps(analysis_result) # Save analysis to project
             project.genre = analysis_result.get('genre') # Save the genre
+
+            # Create Scene objects
+            if 'scenes' in analysis_result:
+                for scene_data in analysis_result['scenes']:
+                    scene = Scene(
+                        project_id=project.id,
+                        scene_number=scene_data['scene_number'],
+                        description=scene_data['description']
+                    )
+                    db.session.add(scene)
+
             db.session.commit()
             return jsonify(analysis_result)
         except json.JSONDecodeError:

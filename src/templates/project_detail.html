@@ -7,6 +7,7 @@
                 <h2>Project: {{ project.name }}</h2>
                 <div class="project-actions">
                     <a href="{{ url_for('schedule', project_id=project.id) }}" class="btn btn-primary">View Schedule</a>
+                    <a href="{{ url_for('post_production_tracking', project_id=project.id) }}" class="btn btn-primary">Post-Production</a>
                 </div>
             </div>
 
@@ -18,6 +19,7 @@
                     <input type="number" id="forecasted_budget" value="{{ project.forecasted_budget | default(0.0) }}" step="0.01">
                     <button id="save-budget-btn" class="btn btn-secondary">Save Budget</button>
                     <a href="{{ url_for('expenses_page', project_id=project.id) }}" class="btn btn-primary">Manage Expenses</a>
+                    <a href="{{ url_for('asset_tracking', project_id=project.id) }}" class="btn btn-primary">Manage Assets</a>
                 </div>
             </div>
 
