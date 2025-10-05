@@ -3,9 +3,9 @@
 {% block content %}
 <div class="container">
     <div class="section">
-        <h2>Schedule for {{ project.name }}</h2>
+        <h2>Schedule for {{ project.name }} <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-secondary" style="margin-left: 15px;">View Project Details</a></h2>
 
-        <div class="script-analysis-suggestions">
+        <div class="script-suggestions section">
             <h3>Script Analysis Suggestions</h3>
             {% if characters %}
             <h4>Characters:</h4>
@@ -33,13 +33,14 @@
                 {% endfor %}
             </ul>
             {% endif %}
+            <button id="generate-tasks-btn" class="btn-primary">Generate Tasks from Script Analysis</button>
         </div>
 
         <div class="schedule-controls">
-            <button id="add-schedule-btn">Add New Task</button>
+            <button id="add-schedule-btn" class="btn-primary">Add New Task</button>
         </div>
 
-        <div id="schedule-form-container" style="display: none;">
+        <div id="schedule-form-container" class="section" style="display: none;">
             <form id="schedule-form">
                 <input type="hidden" id="schedule-item-id">
                 <label for="task_description">Task Description:</label>
@@ -62,38 +63,40 @@
                     <option value="On Hold">On Hold</option>
                 </select>
 
-                <button type="submit">Save Task</button>
-                <button type="button" id="cancel-edit-btn">Cancel</button>
+                <button type="submit" class="btn-primary">Save Task</button>
+                <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
             </form>
         </div>
 
-        <table id="schedule-table">
-            <thead>
-                <tr>
-                    <th>Task Description</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Assigned To</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in schedule_items %}
-                <tr data-id="{{ item.id }}">
-                    <td>{{ item.task_description }}</td>
-                    <td>{{ item.start_date.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ item.end_date.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ item.assigned_to if item.assigned_to else 'N/A' }}</td>
-                    <td>{{ item.status }}</td>
-                    <td>
-                        <button class="edit-schedule-btn" data-id="{{ item.id }}">Edit</button>
-                        <button class="delete-schedule-btn" data-id="{{ item.id }}">Delete</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="section">
+            <table id="schedule-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Task Description</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Assigned To</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in schedule_items %}
+                    <tr data-id="{{ item.id }}">
+                        <td>{{ item.task_description }}</td>
+                        <td>{{ item.start_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ item.end_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ item.assigned_to if item.assigned_to else 'N/A' }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>
+                            <button class="edit-schedule-btn btn-secondary" data-id="{{ item.id }}">Edit</button>
+                            <button class="delete-schedule-btn btn-danger" data-id="{{ item.id }}">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -194,6 +197,34 @@
                 }
             }
         });
+
+        // Generate Tasks from Script Analysis Button Logic
+        const generateTasksBtn = document.getElementById('generate-tasks-btn');
+        if (generateTasksBtn) {
+            generateTasksBtn.addEventListener('click', async function() {
+                if (confirm('Are you sure you want to generate tasks from script analysis? This will add new tasks to your schedule.')) {
+                    try {
+                        const response = await fetch(`/api/schedule/${projectId}/generate_tasks_from_script`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            alert('Tasks generated successfully!');
+                            location.reload();
+                        } else {
+                            const errorData = await response.json();
+                            alert('Error generating tasks: ' + errorData.error);
+                        }
+                    } catch (error) {
+                        console.error('Error generating tasks:', error);
+                        alert('An error occurred while generating tasks.');
+                    }
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

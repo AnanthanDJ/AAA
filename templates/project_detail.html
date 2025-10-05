@@ -17,6 +17,7 @@
                     <label for="forecasted_budget">Forecasted Budget:</label>
                     <input type="number" id="forecasted_budget" value="{{ project.forecasted_budget | default(0.0) }}" step="0.01">
                     <button id="save-budget-btn" class="btn btn-secondary">Save Budget</button>
+                    <a href="{{ url_for('expenses_page', project_id=project.id) }}" class="btn btn-primary">Manage Expenses</a>
                 </div>
             </div>
 
@@ -31,34 +32,22 @@
             <div class="section">
                 <h3>Analysis Results:</h3>
                 <div id="script-analysis-results">
-                    {% if project.analysis_json %}
-                        {% set analysis_data = project.analysis_json | from_json %}
+                    {%- if project.analysis_json -%}
+                        {%- set analysis_data = project.analysis_json | from_json -%}
                         <h4>Genre: {{ analysis_data.genre }}</h4>
-                        <h4>Characters</h4>
-                        <ul>
-                            {% for char in analysis_data.characters %}
-                                <li><strong>{{ char.name }}</strong> ({{ char.dialogue_lines }} lines)</li>
-                            {% endfor %}
-                        </ul>
+                        <h4>Characters</h4><ul>{%- for char in analysis_data.characters -%}
+                            <li><strong>{{ char.name }}</strong> ({{ char.dialogue_lines }} lines)</li>{%- endfor -%}</ul>
 
-                        <h4>Locations</h4>
-                        <ul>
-                            {% for loc in analysis_data.locations %}
-                                <li><strong>{{ loc.name }}</strong> ({{ loc.scenes }} scenes)</li>
-                            {% endfor %}
-                        </ul>
+                        <h4>Locations</h4><ul>{%- for loc in analysis_data.locations -%}
+                            <li><strong>{{ loc.name }}</strong> ({{ loc.scenes }} scenes)</li>{%- endfor -%}</ul>
 
-                        <h4>Props</h4>
-                        <ul>
-                            {% for prop in analysis_data.props %}
-                                <li>{{ prop }}</li>
-                            {% endfor %}
-                        </ul>
+                        <h4>Props</h4><ul>{%- for prop in analysis_data.props -%}
+                            <li>{{ prop }}</li>{%- endfor -%}</ul>
 
                         <h4>Estimated Scenes: {{ analysis_data.estimated_scenes }}</h4>
-                    {% else %}
+                    {%- else -%}
                         <p>No analysis found for this script. Click "Analyze Script" to generate one.</p>
-                    {% endif %}
+                    {%- endif -%}
                 </div>
             </div>
 
@@ -83,11 +72,11 @@
     <script>
         let characterChart = null;
         let locationChart = null;
+        const projectId = {{ project.id | tojson }}; // Moved projectId to a higher scope
 
         document.addEventListener('DOMContentLoaded', function() {
-            const projectId = {{ project.id }};
             const scriptContentDisplay = document.getElementById('script-content-display');
-            const analysisJson = `{{ project.analysis_json | tojson }}`;
+            const analysisData = {{ project.script_analysis | tojson }}; // Directly use as JS object
 
             // Function to load script content
             async function loadScriptContent() {
@@ -108,9 +97,8 @@
             // Load script content on page load
             loadScriptContent();
 
-            // Initial chart rendering if analysis_json exists
-            if (analysisJson && analysisJson !== 'null') {
-                const analysisData = JSON.parse(analysisJson);
+            // Initial chart rendering if analysis_data exists
+            if (analysisData && Object.keys(analysisData).length > 0) {
                 document.getElementById('chart-section').style.display = 'block';
                 createCharacterChart(analysisData.characters);
                 createLocationChart(analysisData.locations);
@@ -281,6 +269,8 @@
                     alert('Please enter a valid positive number for the budget.');
                     return;
                 }
+
+                console.log('Attempting to save budget for projectId:', projectId);
 
                 try {
                     const response = await fetch(`/api/project/${projectId}/update_budget`, {
