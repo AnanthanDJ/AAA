@@ -10,14 +10,8 @@
 <body>
     {% if request.endpoint != 'login' and request.endpoint != 'register' %}
     <div class="header">
-        <h1><a href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='logo.jpg') }}" alt="CineHack.AI Logo" style="height: 40px; vertical-align: middle;"></a></h1>
-        <nav>
-            <a href="{{ url_for('script_analysis') }}" class="{{ 'active' if request.endpoint == 'script_analysis' else '' }}">AI Script Analysis</a>
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('list_projects') }}" class="{{ 'active' if request.endpoint == 'list_projects' else '' }}">My Projects</a>
-                <a href="{{ url_for('list_projects') }}" class="{{ 'active' if request.endpoint == 'list_projects' else '' }}">Projects</a>
-            {% endif %}
-        </nav>
+        <h1><a href="{{ url_for('index') }}">Ananthan Effect</a></h1>
+
         <div class="auth-links">
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('logout') }}" class="btn-ghost">Logout</a>
